@@ -1,5 +1,4 @@
 import re
-
 from decorators import error_handler
 from class_part import *
 
@@ -37,7 +36,7 @@ def add_phone(*args):
     if name.value in ADDRESSBOOK.show_all_records():
         while True:
             user_input = input(
-                "Contact with this name already exist, do you want to rewrite it or create new record? '1'/'2'\n")
+                f"Contact with this name already exist, do you want to rewrite it (1), create new record (2) or add this number to '{name.value}' (3)?\n")
             if user_input == "2":
                 name.value += "(1)"
                 rec = ADDRESSBOOK.get(name.value)
@@ -46,8 +45,10 @@ def add_phone(*args):
                 ADDRESSBOOK.remove_record(rec)
                 rec = ADDRESSBOOK.get(name.value)
                 break
+            elif user_input == "3":
+                break
             else:
-                print("Please type '1' or '2' to continue")
+                print("Please type '1' or '2' or '3' to continue")
 
     if not phone.value.isnumeric():
         raise ValueError
@@ -56,6 +57,7 @@ def add_phone(*args):
     else:
         rec = Record(name, phone)
         ADDRESSBOOK.add_record(rec)
+    print(rec)
     return f'You just added contact "{name}" with phone "{phone}" to your list of contacts'
 
 
@@ -75,7 +77,7 @@ def change(*args):
     if not new_ph.value.isnumeric():
         raise ValueError
 
-    ADDRESSBOOK.change_record(name.value, old_ph.value, new_ph.value)
+    ADDRESSBOOK.change_record(name.value, old_ph, new_ph)
     return f"You just changed number for contact '{name}'. New number is '{new_ph}'"
 
 
@@ -104,13 +106,12 @@ def delete_contact(*args):
 @error_handler
 def add_birthday(*args):
     name = Name(args[0])
-    birthday = tuple(re.split('\D', args[1]))
+    birthday = Birthday(args[1])
+    rec = ADDRESSBOOK.get(name.value)
 
-    if "" in birthday or len(birthday) != 3:
-        return "Date is not correct. Please write date in format: yyyy-m-d"
 
-    if name.value in ADDRESSBOOK:
-        ADDRESSBOOK[name.value].add_birthday(*birthday)
+    if rec:
+        rec.add_birthday(birthday)
         return f"The birthday for {name.value} was added"
     return f"{name.value} is not in your contact list"
 
@@ -124,7 +125,7 @@ def days_to_birthday(*args):
             return days
         return f"{name.value}'s birthday is not set"
     else:
-        raise KeyError
+        return f"{name.value} is not in your contacts"
 
 
 @error_handler
@@ -133,7 +134,7 @@ def delete_phone(*args):
     phone = Phone(args[1])
     if name.value in ADDRESSBOOK:
         ADDRESSBOOK[name.value].remove_phone(phone.value)
-        return f"Phone for {name.value} was deleted"
+        return f"Phone {phone} was deleted from {name.value} "
     return f"Contact {name.value} does not exist"
 
 
@@ -196,4 +197,37 @@ def main():
 
 if __name__ == '__main__':
 
+    ab = AddressBook()
+    rec1 = Record(Name("Bill"), Phone("1234567890"))
+    print(rec1)
+    try:
+        rec2 = Record(Name("Jill"), Phone("0987654321"), Birthday("12.03.1995"))
+    except ValueError as e:
+        print(e)
+    rec2 = Record(Name("Jill"), Phone("0987654321"), Birthday("12-03-1995"))
+    print(rec2)
+    ab.add_record(rec1)
+    ab.add_record(rec2)
+    print(ab)
+
+    phone3 = Phone("7893453434")
+    print(phone3)
+    rec1.add_phone(phone3)
+
+    print(ab)
+
+    bd = Birthday("25-04-1986")
+
+    rec1.add_birthday(bd)
+
+    phone4 = Phone("7893453434")  # такий самий, як phone3, але це інший інстанс
+
+    phone5 = Phone("0667899999")
+
+    print(rec1.change(phone4, phone5))
+
+    print(ab)
+
+    print(ab.get("Bill").days_to_birthday())
+    print(ab.get("Jill").days_to_birthday())
     main()

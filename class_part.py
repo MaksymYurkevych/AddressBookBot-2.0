@@ -6,117 +6,93 @@ class Field:
     """Parent class for all fields"""
 
     def __init__(self, value):
-        self._value = value
+        self.__value = None
+        self.value = value
 
     def __str__(self):
-        return self._value
+        return self.value
 
     def __repr__(self):
-        return self._value
+        return self.value
 
     @property
     def value(self):
-        return self._value
+        return self.__value
 
     @value.setter
     def value(self, value):
-        self._value = value
+        self.__value = value
 
 
 class Name(Field):
     """Required field with username"""
-
-    def __str__(self):
-        return self._value
-
-    def __repr__(self):
-        return self._value
-
-    @Field.value.setter
-    def value(self, value):
-        self._value = value
+    pass
 
 
 class Phone(Field):
     """Optional field with phone numbers"""
 
-    def __init__(self, value):
-        super().__init__(value)
-        self._value = Phone.sanitize_number(value)
+    @property
+    def value(self):
+        return self.__value
+
+    @value.setter
+    def value(self, value):
+        self.__value = value
+
+
+class Birthday(Field):
+    """Creating 'birthday' fields"""
 
     def __str__(self):
-        return self._value
+        return self.value.strftime("%d-%m-%Y")
 
-    @staticmethod
-    def sanitize_number(number):
-        """Return phone number that only include digits"""
-        clean_phone = (number.strip().replace("-", "").replace("(", "").replace(")", "").replace("+", ""))
-        return clean_phone
+    def __repr__(self):
+        return str(self)
 
     @property
     def value(self):
-        return self._value
+        return self.__value
 
-    @Field.value.setter
+    @value.setter
     def value(self, value):
-        self._value = Phone.sanitize_number(value)
-
-
-class Birthday(datetime):
-    """Creating 'birthday' fields"""
-
-    def __init__(self, year, month, day):
-        self.__birthday = self.sanitize_birthday_date(year, month, day)
-
-    def __str__(self):
-        return str(self.__birthday)
-
-    def __repr__(self):
-        return str(self.__birthday)
-
-    @staticmethod
-    def sanitize_birthday_date(year, month, day):
-        birthday = datetime(year=year, month=month, day=day)
-        return str(birthday.date())
-
-    @property
-    def birthday(self):
-        return self.__birthday
-
-    @birthday.setter
-    def birthday(self, year, month, day):
-        self.__birthday = self.sanitize_birthday_date(year, month, day)
+        try:
+            self.__value = datetime.strptime(value, "%d-%m-%Y").date()
+        except ValueError:
+            raise ValueError("Birthday must be in 'DD-MM-YYYY' format")
 
 
 class Record:
     """Class for add, remove, change fields"""
 
-    def __init__(self, name: Name, phone: Phone = None, birthday=None):
+    def __init__(self, name: Name, phone: Phone = None, birthday: Birthday = None):
 
-        if birthday:
-            self.birthday = Birthday(*birthday)
-        else:
-            self.birthday = None
+        self.birthday = birthday
         self.name = name
-        self.phone = phone
         self.phones = []
         if phone:
             self.phones.append(phone)
 
+    def __str__(self) -> str:
+        return f'Name: {self.name} Phone: {", ".join([str(p) for p in self.phones])} {"Birthday: " + str(self.birthday) if self.birthday else ""}'
+
+    def __repr__(self) -> str:
+        return str(self)
+
     def add_phone(self, phone):
         self.phones.append(phone)
+        return f"Phone {phone} was added successfully"
 
-    # TODO change func is not working if old number is incorrect
-    def change(self, old_phone, new_phone):
+    def change(self, old_phone: Phone, new_phone: Phone):
         for phone in self.phones:
-            if phone == old_phone:
+            if phone.value == old_phone.value:
                 self.phones.remove(phone)
                 self.phones.append(new_phone)
-                return
+                return f"Phone {old_phone} was successfully changed to {new_phone}"
             return f"Phone number '{old_phone}' was not found in the record"
 
-    def add_birthday(self, year, month, day):
-        self.birthday = Birthday.sanitize_birthday_date(int(year), int(month), int(day))
+    def add_birthday(self, birthday: Birthday):
+        self.birthday = birthday
 
     def days_to_birthday(self):
 
@@ -124,15 +100,15 @@ class Record:
         cur_year = cur_date.year
 
         if self.birthday:
-            birthday = datetime.strptime(self.birthday, '%Y-%m-%d')
-            this_year_birthday = datetime(cur_year, birthday.month, birthday.day).date()
-            delta = this_year_birthday - cur_date
-            if delta.days >= 0:
-                return f"{self.name}'s birthday will be in {delta.days} days"
+            bd = self.birthday.value
+            this_year_bd = bd.replace(year=cur_year)
+            delta = (this_year_bd - cur_date).days
+            if delta > 0:
+                return f"{self.name}'s birthday will be in {delta} days"
             else:
-                next_year_birthday = datetime(cur_year + 1, birthday.month, birthday.day).date()
-                delta = next_year_birthday - cur_date
-                return f"{self.name}'s birthday will be in {delta.days} days"
+                next_year_bd = this_year_bd.replace(year=cur_year + 1)
+                delta = (next_year_bd - cur_date).days
+                return f"{self.name}'s birthday will be in {delta} days"
         else:
             return f"{self.name}'s birthday is unknown"
 
@@ -141,7 +117,7 @@ class Record:
         return {
             "name": str(self.name.value),
             "phone": phones,
-            "birthday": self.birthday
+            "birthday": self.birthday,
         }
 
     def remove_phone(self, phone):
@@ -149,6 +125,7 @@ class Record:
         for ph in self.phones:
             if ph.value == phone.value:
                 self.phones.remove(ph)
+                return f"Phone {ph} was successfully removed from {self.name}"
         return f"Number {phone} not found"
 
 
