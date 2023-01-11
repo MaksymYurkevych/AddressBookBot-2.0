@@ -75,7 +75,7 @@ def change(*args):
     if not new_ph.value.isnumeric():
         raise ValueError
 
-    ADDRESSBOOK.change_record(name, old_ph, new_ph)
+    ADDRESSBOOK.change_record(name.value, old_ph.value, new_ph.value)
     return f"You just changed number for contact '{name}'. New number is '{new_ph}'"
 
 
